@@ -6,27 +6,17 @@
     <title>FitCal AI</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="app-container">
-        <header class="glass-panel">
-            <h1>FitCal AI ✨</h1>
-            <p>วิเคราะห์แคลอรี่อัจฉริยะ</p>
+        
+        <header class="glass-panel header-flex">
+            <div>
+                <h1>FitCal AI ✨</h1>
+                <p>วิเคราะห์แคลอรี่อัจฉริยะ</p>
+            </div>
+            <button class="menu-btn" onclick="openMenu()">☰</button>
         </header>
-
-        <section class="glass-panel profile-section">
-            <h2>ตั้งค่าร่างกายของคุณ</h2>
-            <div class="input-group">
-                <input type="number" id="age" placeholder="อายุ (ปี)">
-                <input type="number" id="weight" placeholder="น้ำหนัก (กก.)">
-                <input type="number" id="height" placeholder="ส่วนสูง (ซม.)">
-            </div>
-            <button onclick="calculateTDEE()" class="btn-primary">คำนวณเป้าหมาย</button>
-            <div id="tdee-result" class="hidden">
-                <p>เป้าหมายของคุณคือ: <strong id="tdee-value">0</strong> kcal/วัน</p>
-            </div>
-        </section>
 
         <section class="glass-panel dashboard">
             <h2>สถานะวันนี้</h2>
@@ -53,19 +43,36 @@
             </div>
         </section>
 
-        <section class="glass-panel chart-section">
-            <h2>สรุปแคลอรี่ 7 วันล่าสุด 📊</h2>
-            <div style="position: relative; height: 200px; width: 100%;">
-                <canvas id="weeklyChart"></canvas>
-            </div>
-        </section>
+    </div>
 
-        <section class="glass-panel history-section">
-            <h2>ประวัติวันนี้ (กดเพื่อดูส่วนประกอบ)</h2>
+    <div id="sidebar-overlay" class="sidebar-overlay" onclick="closeMenu()"></div>
+    <div id="sidebar" class="sidebar glass-panel-dark">
+        <div class="sidebar-header">
+            <h2>เมนูจัดการ</h2>
+            <button class="close-btn" onclick="closeMenu()">✕</button>
+        </div>
+
+        <div class="menu-section">
+            <h3>ตั้งค่าเป้าหมายร่างกาย</h3>
+            <div class="input-group" style="flex-direction: column;">
+                <input type="number" id="age" placeholder="อายุ (ปี)">
+                <input type="number" id="weight" placeholder="น้ำหนัก (กก.)">
+                <input type="number" id="height" placeholder="ส่วนสูง (ซม.)">
+            </div>
+            <button onclick="calculateTDEE()" class="btn-primary">คำนวณเป้าหมาย</button>
+            <div id="tdee-result" class="hidden" style="margin-top: 10px; text-align: center;">
+                <p>เป้าหมาย: <strong id="tdee-value">0</strong> kcal/วัน</p>
+            </div>
+        </div>
+
+        <hr class="divider">
+
+        <div class="menu-section">
+            <h3>ประวัติวันนี้ (กดดูส่วนประกอบ)</h3>
             <ul id="food-list" class="food-list">
                 </ul>
-            <button onclick="clearData()" class="btn-danger">ล้างข้อมูลทั้งหมด</button>
-        </section>
+            <button onclick="clearData()" class="btn-danger mt-15">ล้างข้อมูลทั้งหมด</button>
+        </div>
     </div>
 
     <div id="ingredient-modal" class="modal hidden">
