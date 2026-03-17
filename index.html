@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="th">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FitCal AI</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="app-container">
@@ -52,12 +52,14 @@
                 <button onclick="simulateAIScan()" class="btn-ai">📸 สแกนด้วย AI</button>
             </div>
         </section>
-<section class="glass-panel chart-section">
+
+        <section class="glass-panel chart-section">
             <h2>สรุปแคลอรี่ 7 วันล่าสุด 📊</h2>
             <div style="position: relative; height: 200px; width: 100%;">
                 <canvas id="weeklyChart"></canvas>
             </div>
         </section>
+
         <section class="glass-panel history-section">
             <h2>ประวัติวันนี้ (กดเพื่อดูส่วนประกอบ)</h2>
             <ul id="food-list" class="food-list">
