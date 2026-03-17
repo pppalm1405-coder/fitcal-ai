@@ -1,148 +1,194 @@
-// ตัวแปรเก็บข้อมูล
-let userData = JSON.parse(localStorage.getItem('userData')) || { tdee: 0 };
-let dailyFoods = JSON.parse(localStorage.getItem('dailyFoods')) || [];
-
-// เริ่มต้นแอป
-function initApp() {
-    if (userData.tdee > 0) {
-        document.getElementById('tdee-result').classList.remove('hidden');
-        document.getElementById('tdee-value').innerText = userData.tdee;
-    }
-    updateDashboard();
-    renderFoodList();
+:root {
+    --primary-green: #A7F3D0;
+    --primary-blue: #BAE6FD;
+    --primary-purple: #DDD6FE;
+    --text-dark: #1F2937;
+    --text-light: #6B7280;
+    --white: rgba(255, 255, 255, 0.85);
 }
 
-// คำนวณ TDEE (สูตร Mifflin-St Jeor แบบง่าย)
-function calculateTDEE() {
-    const age = document.getElementById('age').value;
-    const weight = document.getElementById('weight').value;
-    const height = document.getElementById('height').value;
-
-    if (!age || !weight || !height) {
-        alert("กรุณากรอกข้อมูลให้ครบถ้วนครับ");
-        return;
-    }
-
-    // สมมติเป็นผู้ชายเพื่อความง่ายของโปรโตไทป์ (10*w + 6.25*h - 5*a + 5) * 1.2 (Activity)
-    let bmr = (10 * weight) + (6.25 * height) - (5 * age) + 5;
-    let tdee = Math.round(bmr * 1.2);
-
-    userData.tdee = tdee;
-    localStorage.setItem('userData', JSON.stringify(userData));
-    
-    document.getElementById('tdee-result').classList.remove('hidden');
-    document.getElementById('tdee-value').innerText = tdee;
-    updateDashboard();
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Prompt', sans-serif;
 }
 
-// เพิ่มอาหารพิมพ์เอง
-function addFoodManual() {
-    const name = document.getElementById('food-name').value;
-    const cal = parseInt(document.getElementById('food-cal').value);
-
-    if (!name || isNaN(cal)) {
-        alert("กรุณากรอกชื่อและแคลอรี่ให้ถูกต้อง");
-        return;
-    }
-
-    dailyFoods.push({ name: name, cal: cal });
-    saveAndRefresh();
-    
-    document.getElementById('food-name').value = '';
-    document.getElementById('food-cal').value = '';
+body {
+    background: linear-gradient(135deg, var(--primary-green) 0%, var(--primary-blue) 50%, var(--primary-purple) 100%);
+    color: var(--text-dark);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 20px 10px;
+    background-attachment: fixed;
 }
 
-// จำลองระบบ AI แสกนรูป
-function simulateAIScan() {
-    // ในแอปจริง ตรงนี้จะเปิดกล้องและส่งรูปไปให้ Backend API
-    alert("กำลังเปิดกล้อง และให้ AI วิเคราะห์...");
-    
-    setTimeout(() => {
-        // จำลองผลลัพธ์จาก AI
-        const mockResult = { name: "ข้าวมันไก่ (AI วิเคราะห์)", cal: 550 };
-        dailyFoods.push(mockResult);
-        alert(`AI วิเคราะห์เสร็จสิ้น: ${mockResult.name} = ${mockResult.cal} kcal`);
-        saveAndRefresh();
-    }, 1500);
+/* Mobile App Container */
+.app-container {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
 }
 
-// อัปเดตข้อมูลและหน้าจอ
-function saveAndRefresh() {
-    localStorage.setItem('dailyFoods', JSON.stringify(dailyFoods));
-    updateDashboard();
-    renderFoodList();
+/* Glassmorphism Panels */
+.glass-panel {
+    background: var(--white);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 24px;
+    padding: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
-// อัปเดตหน้าปัดและ Emoji
-function updateDashboard() {
-    const totalCal = dailyFoods.reduce((sum, item) => sum + item.cal, 0);
-    document.getElementById('calories-eaten').innerText = totalCal;
-
-    // อัปเดตวงกลม
-    let percentage = 0;
-    if (userData.tdee > 0) {
-        percentage = Math.min((totalCal / userData.tdee) * 100, 100);
-    }
-    document.querySelector('.circle-progress').style.background = `conic-gradient(#8B5CF6 ${percentage}%, #E5E7EB ${percentage}%)`;
-
-    // ระบบ Emoji 4 ระดับ
-    updateEmojiStatus(totalCal, userData.tdee);
+header {
+    text-align: center;
 }
 
-function updateEmojiStatus(currentCal, targetCal) {
-    const emojiIcon = document.querySelector('.emoji');
-    const emojiText = document.getElementById('emoji-text');
-
-    if (targetCal === 0) {
-        emojiIcon.innerText = "🤔";
-        emojiText.innerText = "กรุณาตั้งเป้าหมายก่อน";
-        return;
-    }
-
-    const ratio = currentCal / targetCal;
-
-    if (ratio < 0.8) {
-        // ระดับ 1 โอเคมากๆ
-        emojiIcon.innerText = "😁";
-        emojiText.innerText = "เยี่ยมมาก! ทานได้อีก";
-        emojiText.style.color = "#10B981";
-    } else if (ratio >= 0.8 && ratio <= 1.0) {
-        // ระดับ 2 กำลังดี
-        emojiIcon.innerText = "🙂";
-        emojiText.innerText = "กำลังดีเลย สมดุลมาก";
-        emojiText.style.color = "#F59E0B";
-    } else if (ratio > 1.0 && ratio <= 1.15) {
-        // ระดับ 3 เกินมาหน่อย
-        emojiIcon.innerText = "😟";
-        emojiText.innerText = "เกินมานิดหน่อย ระวังน้า";
-        emojiText.style.color = "#F97316";
-    } else {
-        // ระดับ 4 เกินไปมาก
-        emojiIcon.innerText = "😫";
-        emojiText.innerText = "วันนี้แคลอรี่ทะลุแล้ว!";
-        emojiText.style.color = "#EF4444";
-    }
+header h1 {
+    font-size: 1.8rem;
+    color: #4C1D95; /* Deep purple */
 }
 
-// แสดงรายการอาหาร
-function renderFoodList() {
-    const list = document.getElementById('food-list');
-    list.innerHTML = '';
-    
-    dailyFoods.forEach((item) => {
-        const li = document.createElement('li');
-        li.innerHTML = `<span>${item.name}</span> <span>${item.cal} kcal</span>`;
-        list.appendChild(li);
-    });
+h2 {
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+    color: #374151;
 }
 
-// ล้างข้อมูล
-function clearData() {
-    if(confirm("ต้องการล้างประวัติของวันนี้ใช่ไหม?")) {
-        dailyFoods = [];
-        saveAndRefresh();
-    }
+/* Inputs & Buttons */
+.input-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
 }
 
-// รันครั้งแรกเมื่อโหลดหน้าเว็บ
-initApp();
+input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    font-size: 1rem;
+    background: rgba(255, 255, 255, 0.9);
+    outline: none;
+    transition: all 0.3s;
+}
+
+input:focus {
+    border-color: #8B5CF6;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+}
+
+button {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+.btn-primary {
+    background: #8B5CF6;
+    color: white;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-secondary {
+    background: #3B82F6;
+    color: white;
+    flex: 1;
+}
+
+.btn-ai {
+    background: linear-gradient(90deg, #EC4899, #8B5CF6);
+    color: white;
+    flex: 1;
+}
+
+.btn-danger {
+    background: #EF4444;
+    color: white;
+    margin-top: 15px;
+}
+
+.hidden {
+    display: none;
+}
+
+#tdee-result {
+    margin-top: 15px;
+    text-align: center;
+    background: rgba(139, 92, 246, 0.1);
+    padding: 10px;
+    border-radius: 12px;
+}
+
+/* Dashboard Circle */
+.dashboard {
+    text-align: center;
+}
+
+.circle-progress {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background: conic-gradient(#8B5CF6 0%, #E5E7EB 0%);
+    margin: 0 auto 20px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.circle-inner {
+    width: 130px;
+    height: 130px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.circle-inner h3 {
+    font-size: 2rem;
+    color: #111827;
+}
+
+/* Emoji */
+.emoji-status .emoji {
+    font-size: 4rem;
+    display: block;
+    margin-bottom: 5px;
+    transition: all 0.3s ease;
+}
+
+/* History List */
+.food-list {
+    list-style: none;
+}
+
+.food-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 12px;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
