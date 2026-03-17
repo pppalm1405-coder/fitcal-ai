@@ -1,18 +1,24 @@
 // ตัวแปรเก็บข้อมูล
 let userData = JSON.parse(localStorage.getItem('userData')) || { tdee: 0 };
 let dailyFoods = JSON.parse(localStorage.getItem('dailyFoods')) || [];
+let weeklyChartInstance = null;
 
 // เริ่มต้นแอป
 function initApp() {
     if (userData.tdee > 0) {
         document.getElementById('tdee-result').classList.remove('hidden');
         document.getElementById('tdee-value').innerText = userData.tdee;
+        
+        // ใส่ค่าเดิมกลับเข้าไปในช่อง input ให้ด้วย
+        if(userData.age) document.getElementById('age').value = userData.age;
+        if(userData.weight) document.getElementById('weight').value = userData.weight;
+        if(userData.height) document.getElementById('height').value = userData.height;
     }
     updateDashboard();
     renderFoodList();
 }
 
-// คำนวณ TDEE (สูตร Mifflin-St Jeor แบบง่าย)
+// คำนวณ TDEE
 function calculateTDEE() {
     const age = document.getElementById('age').value;
     const weight = document.getElementById('weight').value;
@@ -23,11 +29,10 @@ function calculateTDEE() {
         return;
     }
 
-    // สมมติเป็นผู้ชายเพื่อความง่ายของโปรโตไทป์ (10*w + 6.25*h - 5*a + 5) * 1.2 (Activity)
     let bmr = (10 * weight) + (6.25 * height) - (5 * age) + 5;
     let tdee = Math.round(bmr * 1.2);
 
-    userData.tdee = tdee;
+    userData = { tdee: tdee, age: age, weight: weight, height: height };
     localStorage.setItem('userData', JSON.stringify(userData));
     
     document.getElementById('tdee-result').classList.remove('hidden');
@@ -35,60 +40,70 @@ function calculateTDEE() {
     updateDashboard();
 }
 
-// เพิ่มอาหารพิมพ์เอง
-function addFoodManual() {
-    const name = document.getElementById('food-name').value;
-    const cal = parseInt(document.getElementById('food-cal').value);
+// จำลองสมอง AI แยกส่วนประกอบ
+function generateAIAnalysis(foodName) {
+    const ingredients = [
+        { name: "🍚 คาร์โบไฮเดรต (ข้าว/แป้ง)", cal: Math.floor(Math.random() * 150) + 120 },
+        { name: "🥩 โปรตีน (เนื้อสัตว์/ไข่)", cal: Math.floor(Math.random() * 200) + 80 },
+        { name: "🧈 ไขมัน (น้ำมัน/กะทิ)", cal: Math.floor(Math.random() * 100) + 40 },
+        { name: "🥬 วิตามิน (ผัก/เครื่องปรุง)", cal: Math.floor(Math.random() * 30) + 10 }
+    ];
+    
+    const totalCal = ingredients.reduce((sum, item) => sum + item.cal, 0);
+    
+    return { name: foodName, cal: totalCal, ingredients: ingredients };
+}
 
-    if (!name || isNaN(cal)) {
-        alert("กรุณากรอกชื่อและแคลอรี่ให้ถูกต้อง");
+// เพิ่มอาหารพิมพ์ชื่อเอง
+function addFoodByName() {
+    const name = document.getElementById('food-name').value;
+
+    if (!name) {
+        alert("กรุณาพิมพ์ชื่อเมนูอาหารก่อนครับ");
         return;
     }
 
-    dailyFoods.push({ name: name, cal: cal });
+    const aiResult = generateAIAnalysis(name);
+    dailyFoods.push(aiResult);
     saveAndRefresh();
-    
     document.getElementById('food-name').value = '';
-    document.getElementById('food-cal').value = '';
 }
 
-// จำลองระบบ AI แสกนรูป
+// จำลอง AI แสกนรูป
 function simulateAIScan() {
-    // ในแอปจริง ตรงนี้จะเปิดกล้องและส่งรูปไปให้ Backend API
-    alert("กำลังเปิดกล้อง และให้ AI วิเคราะห์...");
-    
+    alert("📸 กำลังเปิดกล้อง และให้ AI วิเคราะห์ส่วนประกอบจากภาพ...");
     setTimeout(() => {
-        // จำลองผลลัพธ์จาก AI
-        const mockResult = { name: "ข้าวมันไก่ (AI วิเคราะห์)", cal: 550 };
-        dailyFoods.push(mockResult);
-        alert(`AI วิเคราะห์เสร็จสิ้น: ${mockResult.name} = ${mockResult.cal} kcal`);
+        const aiResult = generateAIAnalysis("อาหารจากการสแกน 🍽️");
+        dailyFoods.push(aiResult);
         saveAndRefresh();
     }, 1500);
 }
 
-// อัปเดตข้อมูลและหน้าจอ
+// อัปเดตข้อมูล
 function saveAndRefresh() {
     localStorage.setItem('dailyFoods', JSON.stringify(dailyFoods));
     updateDashboard();
     renderFoodList();
 }
 
-// อัปเดตหน้าปัดและ Emoji
+// อัปเดตหน้าปัด วงกลม อีโมจิ และ กราฟ
 function updateDashboard() {
     const totalCal = dailyFoods.reduce((sum, item) => sum + item.cal, 0);
     document.getElementById('calories-eaten').innerText = totalCal;
 
-    // อัปเดตวงกลม
     let percentage = 0;
     if (userData.tdee > 0) {
         percentage = Math.min((totalCal / userData.tdee) * 100, 100);
     }
     document.querySelector('.circle-progress').style.background = `conic-gradient(#8B5CF6 ${percentage}%, #E5E7EB ${percentage}%)`;
 
-    // ระบบ Emoji 4 ระดับ
     updateEmojiStatus(totalCal, userData.tdee);
+    
+    // อัปเดตกราฟแท่ง
+    renderChart();
 }
 
+// คำนวณ Emoji 4 ระดับ
 function updateEmojiStatus(currentCal, targetCal) {
     const emojiIcon = document.querySelector('.emoji');
     const emojiText = document.getElementById('emoji-text');
@@ -102,38 +117,61 @@ function updateEmojiStatus(currentCal, targetCal) {
     const ratio = currentCal / targetCal;
 
     if (ratio < 0.8) {
-        // ระดับ 1 โอเคมากๆ
         emojiIcon.innerText = "😁";
         emojiText.innerText = "เยี่ยมมาก! ทานได้อีก";
         emojiText.style.color = "#10B981";
     } else if (ratio >= 0.8 && ratio <= 1.0) {
-        // ระดับ 2 กำลังดี
         emojiIcon.innerText = "🙂";
         emojiText.innerText = "กำลังดีเลย สมดุลมาก";
         emojiText.style.color = "#F59E0B";
     } else if (ratio > 1.0 && ratio <= 1.15) {
-        // ระดับ 3 เกินมาหน่อย
         emojiIcon.innerText = "😟";
         emojiText.innerText = "เกินมานิดหน่อย ระวังน้า";
         emojiText.style.color = "#F97316";
     } else {
-        // ระดับ 4 เกินไปมาก
         emojiIcon.innerText = "😫";
         emojiText.innerText = "วันนี้แคลอรี่ทะลุแล้ว!";
         emojiText.style.color = "#EF4444";
     }
 }
 
-// แสดงรายการอาหาร
+// แสดงรายการประวัติ
 function renderFoodList() {
     const list = document.getElementById('food-list');
     list.innerHTML = '';
     
-    dailyFoods.forEach((item) => {
+    dailyFoods.forEach((item, index) => {
         const li = document.createElement('li');
-        li.innerHTML = `<span>${item.name}</span> <span>${item.cal} kcal</span>`;
+        li.onclick = () => openModal(index);
+        li.innerHTML = `<span>${item.name}</span> <span><strong>${item.cal}</strong> kcal</span>`;
         list.appendChild(li);
     });
+}
+
+// ควบคุม Modal
+function openModal(index) {
+    const item = dailyFoods[index];
+    document.getElementById('modal-title').innerText = item.name;
+    
+    const ul = document.getElementById('modal-ingredients');
+    ul.innerHTML = '';
+    
+    if (item.ingredients && item.ingredients.length > 0) {
+        item.ingredients.forEach(ing => {
+            const li = document.createElement('li');
+            li.innerHTML = `<span>${ing.name}</span> <span>${ing.cal} kcal</span>`;
+            ul.appendChild(li);
+        });
+    } else {
+        ul.innerHTML = '<li><span>ไม่มีข้อมูลส่วนประกอบ</span></li>';
+    }
+    
+    document.getElementById('modal-total-cal').innerText = `${item.cal} kcal`;
+    document.getElementById('ingredient-modal').classList.remove('hidden');
+}
+
+function closeModal() {
+    document.getElementById('ingredient-modal').classList.add('hidden');
 }
 
 // ล้างข้อมูล
@@ -144,27 +182,22 @@ function clearData() {
     }
 }
 
-// รันครั้งแรกเมื่อโหลดหน้าเว็บ
-initApp();
-// --- ระบบวาดกราฟ Chart.js ---
-let weeklyChartInstance = null;
-
+// วาดกราฟ Chart.js
 function renderChart() {
-    const ctx = document.getElementById('weeklyChart').getContext('2d');
+    const canvas = document.getElementById('weeklyChart');
+    if (!canvas) return; // ป้องกัน error ถ้าหา canvas ไม่เจอ
     
-    // ถ้ามีกราฟเก่าอยู่ ให้ล้างทิ้งก่อนวาดใหม่ (ป้องกันกราฟซ้อนกัน)
+    const ctx = canvas.getContext('2d');
+    
     if (weeklyChartInstance) {
         weeklyChartInstance.destroy();
     }
 
-    // คำนวณแคลอรี่ของวันนี้เพื่อไปใส่ในกราฟ
     const todayCal = dailyFoods.reduce((sum, item) => sum + item.cal, 0);
 
-    // จำลองข้อมูล 6 วันย้อนหลัง + วันนี้ (ในสเตปต่อไปเราจะดึงของจริงจาก Firebase)
     const labels = ['จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.', 'วันนี้'];
     const data = [1800, 2100, 1900, 2400, 2200, 1500, todayCal];
     
-    // เส้นเป้าหมาย TDEE
     const target = userData.tdee || 2000;
     const targetData = Array(7).fill(target);
 
@@ -174,16 +207,16 @@ function renderChart() {
             labels: labels,
             datasets: [
                 {
-                    label: 'แคลอรี่ที่ทาน',
+                    label: 'แคลอรี่',
                     data: data,
-                    backgroundColor: 'rgba(139, 92, 246, 0.7)', // สีม่วงโปร่งแสง
+                    backgroundColor: 'rgba(139, 92, 246, 0.7)',
                     borderRadius: 6,
                 },
                 {
-                    label: 'เป้าหมาย (TDEE)',
+                    label: 'TDEE',
                     data: targetData,
                     type: 'line',
-                    borderColor: '#EF4444', // สีแดงเส้นประ
+                    borderColor: '#EF4444',
                     borderWidth: 2,
                     pointRadius: 0,
                     fill: false,
@@ -194,20 +227,14 @@ function renderChart() {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false } // ซ่อนป้ายกำกับให้ดูมินิมอล
-            },
+            plugins: { legend: { display: false } },
             scales: {
-                y: { 
-                    beginAtZero: true,
-                    grid: { color: 'rgba(0,0,0,0.05)' },
-                    border: { display: false }
-                },
-                x: {
-                    grid: { display: false },
-                    border: { display: false }
-                }
+                y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: false } },
+                x: { grid: { display: false }, border: { display: false } }
             }
         }
     });
 }
+
+// รันแอป
+initApp();
