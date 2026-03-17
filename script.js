@@ -1,84 +1,268 @@
-// นำเข้า Firebase SDK รูปแบบ Module (เวอร์ชัน 10)
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-
-// ใส่ Config ของคุณ
+// ==========================================
+// 1. ตั้งค่าฐานข้อมูล Firebase
+// ==========================================
 const firebaseConfig = {
-  apiKey: "AIzaSyDl51L8y775obXxODk4h58BYqz3kwedJT0",
-  authDomain: "fitcal-ai-d89d8.firebaseapp.com",
-  projectId: "fitcal-ai-d89d8",
-  storageBucket: "fitcal-ai-d89d8.firebasestorage.app",
-  messagingSenderId: "240265112974",
-  appId: "1:240265112974:web:4a6f59fb9fa20f6f2348df",
-  measurementId: "G-070DHH82RM"
+    apiKey: "AIzaSyDl51L8y775obXxODk4h58BYqz3kwedJT0",
+    authDomain: "fitcal-ai-d89d8.firebaseapp.com",
+    projectId: "fitcal-ai-d89d8",
+    storageBucket: "fitcal-ai-d89d8.firebasestorage.app",
+    messagingSenderId: "240265112974",
+    appId: "1:240265112974:web:4a6f59fb9fa20f6f2348df",
+    measurementId: "G-070DHH82RM"
 };
 
-// เริ่มต้นใช้งาน Firebase และ Firestore
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+// เปิดใช้งาน Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-// อ้างอิงถึง HTML Elements
-const foodNameInput = document.getElementById('foodName');
-const caloriesInput = document.getElementById('calories');
-const addBtn = document.getElementById('addBtn');
-const foodList = document.getElementById('foodList');
-const totalCaloriesEl = document.getElementById('totalCalories');
+// สร้าง ID อัตโนมัติประจำเครื่อง (เพื่อให้จำข้อมูลได้แม้ไม่มีระบบ Login)
+let deviceId = localStorage.getItem('deviceId');
+if (!deviceId) {
+    deviceId = 'user_' + Date.now();
+    localStorage.setItem('deviceId', deviceId);
+}
+// สร้างกล่องเก็บข้อมูลชื่อ 'users' แยกตาม deviceId
+const userRef = db.collection('users').doc(deviceId);
 
-// สร้าง Collection ใน Firestore ชื่อ "calories_logs"
-const colRef = collection(db, "calories_logs");
+// ==========================================
+// 2. ตัวแปร และ ระบบ Cloud Sync
+// ==========================================
+let userData = { tdee: 0 };
+let dailyFoods = [];
 
-// 1. ฟังก์ชันเพิ่มข้อมูล (Add Data)
-addBtn.addEventListener('click', async () => {
-    const foodName = foodNameInput.value.trim();
-    const calories = parseFloat(caloriesInput.value);
+// ฟังก์ชันดันข้อมูลขึ้น Firebase
+async function syncToFirebase() {
+    try {
+        await userRef.set({
+            userData: userData,
+            dailyFoods: dailyFoods,
+            savedDate: new Date().toLocaleDateString('th-TH')
+        });
+        console.log("บันทึกข้อมูลขึ้น Firebase สำเร็จ!");
+    } catch (error) {
+        console.error("Firebase Error:", error);
+    }
+}
 
-    // ตรวจสอบว่ากรอกข้อมูลครบหรือไม่
-    if (foodName === "" || isNaN(calories) || calories <= 0) {
-        alert("โปรดกรอกชื่ออาหารและแคลอรี่ให้ถูกต้อง");
+// ฟังก์ชันดึงข้อมูลจาก Firebase ตอนเปิดแอป
+async function loadFromFirebase() {
+    try {
+        const doc = await userRef.get();
+        const todayDate = new Date().toLocaleDateString('th-TH');
+
+        if (doc.exists) {
+            const data = doc.data();
+            userData = data.userData || { tdee: 0 };
+            
+            // เช็คว่าขึ้นวันใหม่หรือยัง
+            if (data.savedDate !== todayDate) {
+                dailyFoods = []; // ถ้าวันใหม่ ล้างอาหาร
+                syncToFirebase(); // อัปเดตขึ้นคลาวด์เลย
+            } else {
+                dailyFoods = data.dailyFoods || [];
+            }
+        } else {
+            // กรณีเข้าแอปครั้งแรกของ ID นี้
+            syncToFirebase(); 
+        }
+        updateUIOnLoad();
+    } catch (error) {
+        // กรณีเน็ตหลุด ให้ใช้ข้อมูลในเครื่องไปก่อน
+        console.log("ใช้งานโหมด Offline");
+        updateUIOnLoad();
+    }
+}
+
+// ==========================================
+// 3. ฟังก์ชันควบคุมหน้าจอ (UI Logic)
+// ==========================================
+function updateUIOnLoad() {
+    if (userData.tdee > 0) {
+        document.getElementById('tdee-result').classList.remove('hidden');
+        document.getElementById('tdee-value').innerText = userData.tdee;
+        if(userData.age) document.getElementById('age').value = userData.age;
+        if(userData.weight) document.getElementById('weight').value = userData.weight;
+        if(userData.height) document.getElementById('height').value = userData.height;
+    }
+    updateDashboard();
+    renderFoodList();
+}
+
+function initApp() {
+    loadFromFirebase(); // เริ่มแอปด้วยการดึงข้อมูลจาก Cloud
+}
+
+function openMenu() {
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('sidebar-overlay').classList.add('open');
+}
+
+function closeMenu() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-overlay').classList.remove('open');
+}
+
+function calculateTDEE() {
+    const age = document.getElementById('age').value;
+    const weight = document.getElementById('weight').value;
+    const height = document.getElementById('height').value;
+
+    if (!age || !weight || !height) {
+        alert("กรุณากรอกข้อมูลให้ครบถ้วนครับ");
         return;
     }
 
-    try {
-        // เพิ่มเอกสารใหม่ลงใน Firestore
-        await addDoc(colRef, {
-            foodName: foodName,
-            calories: calories,
-            createdAt: serverTimestamp() // บันทึกเวลาที่เพิ่มข้อมูล
-        });
-        
-        // เคลียร์ค่าในช่องกรอกข้อมูล
-        foodNameInput.value = '';
-        caloriesInput.value = '';
-        foodNameInput.focus();
-    } catch (error) {
-        console.error("Error adding document: ", error);
-        alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+    let bmr = (10 * weight) + (6.25 * height) - (5 * age) + 5;
+    let tdee = Math.round(bmr * 1.2);
+
+    userData = { tdee: tdee, age: age, weight: weight, height: height };
+    
+    // อัปเดตขึ้น Firebase
+    syncToFirebase(); 
+    
+    document.getElementById('tdee-result').classList.remove('hidden');
+    document.getElementById('tdee-value').innerText = tdee;
+    updateDashboard();
+    
+    alert("บันทึกเป้าหมายขึ้นฐานข้อมูลเรียบร้อยครับ!");
+    closeMenu(); 
+}
+
+function generateAIAnalysis(foodName) {
+    const ingredients = [
+        { name: "🍚 คาร์โบไฮเดรต", cal: Math.floor(Math.random() * 150) + 120 },
+        { name: "🥩 โปรตีน", cal: Math.floor(Math.random() * 200) + 80 },
+        { name: "🧈 ไขมัน", cal: Math.floor(Math.random() * 100) + 40 },
+        { name: "🥬 วิตามิน/อื่นๆ", cal: Math.floor(Math.random() * 30) + 10 }
+    ];
+    const totalCal = ingredients.reduce((sum, item) => sum + item.cal, 0);
+    return { name: foodName, cal: totalCal, ingredients: ingredients };
+}
+
+function addFoodByName() {
+    const name = document.getElementById('food-name').value;
+    if (!name) {
+        alert("กรุณาพิมพ์ชื่อเมนูอาหารก่อนครับ");
+        return;
     }
-});
+    const aiResult = generateAIAnalysis(name);
+    dailyFoods.push(aiResult);
+    
+    saveAndRefresh(); // อันนี้จะส่งขึ้น Firebase อัตโนมัติ
+    document.getElementById('food-name').value = '';
+}
 
-// 2. ฟังก์ชันดึงข้อมูลแบบ Real-time (Read Data)
-// จัดเรียงข้อมูลตามเวลาที่สร้าง จากล่าสุดไปเก่าสุด
-const q = query(colRef, orderBy("createdAt", "desc"));
+function simulateAIScan() {
+    alert("📸 กำลังให้ AI วิเคราะห์ส่วนประกอบจากภาพ...");
+    setTimeout(() => {
+        const aiResult = generateAIAnalysis("เมนูจากการสแกน 🍽️");
+        dailyFoods.push(aiResult);
+        saveAndRefresh(); // ส่งขึ้น Firebase อัตโนมัติ
+    }, 1000);
+}
 
-onSnapshot(q, (snapshot) => {
-    let totalCals = 0;
-    foodList.innerHTML = ''; // เคลียร์รายการเดิมก่อนลูปใหม่
+function saveAndRefresh() {
+    syncToFirebase(); // ซิงค์เข้าคลาวด์
+    updateDashboard();
+    renderFoodList();
+}
 
-    snapshot.forEach((doc) => {
-        const data = doc.data();
-        
-        // คำนวณแคลอรี่รวม
-        totalCals += data.calories;
+function updateDashboard() {
+    const totalCal = dailyFoods.reduce((sum, item) => sum + item.cal, 0);
+    document.getElementById('calories-eaten').innerText = totalCal;
 
-        // สร้าง HTML Elements สำหรับแต่ละรายการอาหาร
+    let percentage = 0;
+    if (userData.tdee > 0) {
+        percentage = Math.min((totalCal / userData.tdee) * 100, 100);
+    }
+    document.querySelector('.circle-progress').style.background = `conic-gradient(#8B5CF6 ${percentage}%, #E5E7EB ${percentage}%)`;
+
+    updateEmojiStatus(totalCal, userData.tdee);
+}
+
+function updateEmojiStatus(currentCal, targetCal) {
+    const emojiIcon = document.querySelector('.emoji');
+    const emojiText = document.getElementById('emoji-text');
+
+    if (targetCal === 0) {
+        emojiIcon.innerText = "🤔";
+        emojiText.innerText = "กดเมนู ☰ เพื่อตั้งเป้าหมาย";
+        return;
+    }
+
+    const ratio = currentCal / targetCal;
+
+    if (ratio < 0.8) {
+        emojiIcon.innerText = "😁";
+        emojiText.innerText = "เยี่ยมมาก! ทานได้อีก";
+        emojiText.style.color = "#10B981";
+    } else if (ratio >= 0.8 && ratio <= 1.0) {
+        emojiIcon.innerText = "🙂";
+        emojiText.innerText = "กำลังดีเลย สมดุลมาก";
+        emojiText.style.color = "#F59E0B";
+    } else if (ratio > 1.0 && ratio <= 1.15) {
+        emojiIcon.innerText = "😟";
+        emojiText.innerText = "เกินมานิดหน่อย ระวังน้า";
+        emojiText.style.color = "#F97316";
+    } else {
+        emojiIcon.innerText = "😫";
+        emojiText.innerText = "วันนี้แคลอรี่ทะลุแล้ว!";
+        emojiText.style.color = "#EF4444";
+    }
+}
+
+function renderFoodList() {
+    const list = document.getElementById('food-list');
+    list.innerHTML = '';
+    
+    if (dailyFoods.length === 0) {
+        list.innerHTML = '<li style="justify-content:center; color:#9CA3AF;">ยังไม่มีประวัติการทานวันนี้</li>';
+        return;
+    }
+
+    dailyFoods.forEach((item, index) => {
         const li = document.createElement('li');
-        li.innerHTML = `
-            <span class="food-name">${data.foodName}</span>
-            <span class="food-cal">${data.calories.toLocaleString()} kcal</span>
-        `;
-        foodList.appendChild(li);
+        li.onclick = () => {
+            closeMenu(); 
+            setTimeout(() => openModal(index), 300);
+        };
+        li.innerHTML = `<span>${item.name}</span> <span><strong>${item.cal}</strong> kcal</span>`;
+        list.appendChild(li);
     });
+}
 
-    // อัปเดตตัวเลขแคลอรี่รวมบนหน้าจอ
-    totalCaloriesEl.textContent = totalCals.toLocaleString();
-});
+function openModal(index) {
+    const item = dailyFoods[index];
+    document.getElementById('modal-title').innerText = item.name;
+    
+    const ul = document.getElementById('modal-ingredients');
+    ul.innerHTML = '';
+    
+    if (item.ingredients && item.ingredients.length > 0) {
+        item.ingredients.forEach(ing => {
+            const li = document.createElement('li');
+            li.innerHTML = `<span>${ing.name}</span> <span>${ing.cal} kcal</span>`;
+            ul.appendChild(li);
+        });
+    } else {
+        ul.innerHTML = '<li><span>ไม่มีข้อมูลส่วนประกอบ</span></li>';
+    }
+    
+    document.getElementById('modal-total-cal').innerText = `${item.cal} kcal`;
+    document.getElementById('ingredient-modal').classList.remove('hidden');
+}
+
+function closeModal() {
+    document.getElementById('ingredient-modal').classList.add('hidden');
+}
+
+function clearData() {
+    if(confirm("ต้องการล้างประวัติของวันนี้ใช่ไหม?")) {
+        dailyFoods = [];
+        saveAndRefresh();
+        closeMenu();
+    }
+}
+
+// สั่งแอปทำงานเมื่อโหลดไฟล์เสร็จ
+initApp();
