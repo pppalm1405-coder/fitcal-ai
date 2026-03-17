@@ -1,1 +1,65 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FitCal AI</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <header class="glass-panel">
+            <h1>FitCal AI ✨</h1>
+            <p>วิเคราะห์แคลอรี่อัจฉริยะ</p>
+        </header>
 
+        <section class="glass-panel profile-section">
+            <h2>ตั้งค่าร่างกายของคุณ</h2>
+            <div class="input-group">
+                <input type="number" id="age" placeholder="อายุ (ปี)">
+                <input type="number" id="weight" placeholder="น้ำหนัก (กก.)">
+                <input type="number" id="height" placeholder="ส่วนสูง (ซม.)">
+            </div>
+            <button onclick="calculateTDEE()" class="btn-primary">คำนวณเป้าหมาย</button>
+            <div id="tdee-result" class="hidden">
+                <p>เป้าหมายของคุณคือ: <strong id="tdee-value">0</strong> kcal/วัน</p>
+            </div>
+        </section>
+
+        <section class="glass-panel dashboard">
+            <h2>สถานะวันนี้</h2>
+            <div class="circle-progress">
+                <div class="circle-inner">
+                    <h3 id="calories-eaten">0</h3>
+                    <p>kcal ที่กิน</p>
+                </div>
+            </div>
+            <div class="emoji-status" id="emoji-display">
+                <span class="emoji">🤔</span>
+                <p id="emoji-text">รอข้อมูล...</p>
+            </div>
+        </section>
+
+        <section class="glass-panel add-food">
+            <h2>เพิ่มมื้ออาหาร</h2>
+            <div class="input-group">
+                <input type="text" id="food-name" placeholder="ชื่อเมนูอาหาร">
+                <input type="number" id="food-cal" placeholder="แคลอรี่ (ถ้าทราบ)">
+            </div>
+            <div class="action-buttons">
+                <button onclick="addFoodManual()" class="btn-secondary">เพิ่มข้อมูล</button>
+                <button onclick="simulateAIScan()" class="btn-ai">📸 สแกนด้วย AI</button>
+            </div>
+        </section>
+
+        <section class="glass-panel history-section">
+            <h2>ประวัติวันนี้</h2>
+            <ul id="food-list" class="food-list">
+                </ul>
+            <button onclick="clearData()" class="btn-danger">ล้างข้อมูลทั้งหมด</button>
+        </section>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
