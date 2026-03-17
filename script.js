@@ -15,13 +15,12 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// สร้าง ID อัตโนมัติประจำเครื่อง (เพื่อให้จำข้อมูลได้แม้ไม่มีระบบ Login)
+// สร้าง ID อัตโนมัติประจำเครื่อง
 let deviceId = localStorage.getItem('deviceId');
 if (!deviceId) {
     deviceId = 'user_' + Date.now();
     localStorage.setItem('deviceId', deviceId);
 }
-// สร้างกล่องเก็บข้อมูลชื่อ 'users' แยกตาม deviceId
 const userRef = db.collection('users').doc(deviceId);
 
 // ==========================================
@@ -30,7 +29,6 @@ const userRef = db.collection('users').doc(deviceId);
 let userData = { tdee: 0 };
 let dailyFoods = [];
 
-// ฟังก์ชันดันข้อมูลขึ้น Firebase
 async function syncToFirebase() {
     try {
         await userRef.set({
@@ -44,7 +42,6 @@ async function syncToFirebase() {
     }
 }
 
-// ฟังก์ชันดึงข้อมูลจาก Firebase ตอนเปิดแอป
 async function loadFromFirebase() {
     try {
         const doc = await userRef.get();
@@ -54,20 +51,17 @@ async function loadFromFirebase() {
             const data = doc.data();
             userData = data.userData || { tdee: 0 };
             
-            // เช็คว่าขึ้นวันใหม่หรือยัง
             if (data.savedDate !== todayDate) {
-                dailyFoods = []; // ถ้าวันใหม่ ล้างอาหาร
-                syncToFirebase(); // อัปเดตขึ้นคลาวด์เลย
+                dailyFoods = []; 
+                syncToFirebase(); 
             } else {
                 dailyFoods = data.dailyFoods || [];
             }
         } else {
-            // กรณีเข้าแอปครั้งแรกของ ID นี้
             syncToFirebase(); 
         }
         updateUIOnLoad();
     } catch (error) {
-        // กรณีเน็ตหลุด ให้ใช้ข้อมูลในเครื่องไปก่อน
         console.log("ใช้งานโหมด Offline");
         updateUIOnLoad();
     }
@@ -89,7 +83,7 @@ function updateUIOnLoad() {
 }
 
 function initApp() {
-    loadFromFirebase(); // เริ่มแอปด้วยการดึงข้อมูลจาก Cloud
+    loadFromFirebase(); 
 }
 
 function openMenu() {
@@ -116,8 +110,6 @@ function calculateTDEE() {
     let tdee = Math.round(bmr * 1.2);
 
     userData = { tdee: tdee, age: age, weight: weight, height: height };
-    
-    // อัปเดตขึ้น Firebase
     syncToFirebase(); 
     
     document.getElementById('tdee-result').classList.remove('hidden');
@@ -148,21 +140,12 @@ function addFoodByName() {
     const aiResult = generateAIAnalysis(name);
     dailyFoods.push(aiResult);
     
-    saveAndRefresh(); // อันนี้จะส่งขึ้น Firebase อัตโนมัติ
+    saveAndRefresh(); 
     document.getElementById('food-name').value = '';
 }
 
-function simulateAIScan() {
-    alert("📸 กำลังให้ AI วิเคราะห์ส่วนประกอบจากภาพ...");
-    setTimeout(() => {
-        const aiResult = generateAIAnalysis("เมนูจากการสแกน 🍽️");
-        dailyFoods.push(aiResult);
-        saveAndRefresh(); // ส่งขึ้น Firebase อัตโนมัติ
-    }, 1000);
-}
-
 function saveAndRefresh() {
-    syncToFirebase(); // ซิงค์เข้าคลาวด์
+    syncToFirebase(); 
     updateDashboard();
     renderFoodList();
 }
