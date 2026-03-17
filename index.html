@@ -44,22 +44,35 @@
         <section class="glass-panel add-food">
             <h2>เพิ่มมื้ออาหาร</h2>
             <div class="input-group">
-                <input type="text" id="food-name" placeholder="ชื่อเมนูอาหาร">
-                <input type="number" id="food-cal" placeholder="แคลอรี่ (ถ้าทราบ)">
+                <input type="text" id="food-name" placeholder="พิมพ์ชื่อเมนู (เช่น ข้าวกะเพราหมูสับ)" style="width: 100%;">
             </div>
             <div class="action-buttons">
-                <button onclick="addFoodManual()" class="btn-secondary">เพิ่มข้อมูล</button>
+                <button onclick="addFoodByName()" class="btn-secondary">วิเคราะห์จากชื่อ</button>
                 <button onclick="simulateAIScan()" class="btn-ai">📸 สแกนด้วย AI</button>
             </div>
         </section>
 
         <section class="glass-panel history-section">
-            <h2>ประวัติวันนี้</h2>
+            <h2>ประวัติวันนี้ (กดเพื่อดูส่วนประกอบ)</h2>
             <ul id="food-list" class="food-list">
                 </ul>
             <button onclick="clearData()" class="btn-danger">ล้างข้อมูลทั้งหมด</button>
         </section>
     </div>
+
+    <div id="ingredient-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h3 id="modal-title">รายละเอียดเมนู</h3>
+            <ul id="modal-ingredients" class="ingredient-list">
+                </ul>
+            <div class="modal-total">
+                <span>รวมทั้งหมด:</span>
+                <strong id="modal-total-cal">0 kcal</strong>
+            </div>
+            <button onclick="closeModal()" class="btn-primary mt-15">ปิดหน้าต่าง</button>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>
