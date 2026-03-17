@@ -146,3 +146,68 @@ function clearData() {
 
 // รันครั้งแรกเมื่อโหลดหน้าเว็บ
 initApp();
+// --- ระบบวาดกราฟ Chart.js ---
+let weeklyChartInstance = null;
+
+function renderChart() {
+    const ctx = document.getElementById('weeklyChart').getContext('2d');
+    
+    // ถ้ามีกราฟเก่าอยู่ ให้ล้างทิ้งก่อนวาดใหม่ (ป้องกันกราฟซ้อนกัน)
+    if (weeklyChartInstance) {
+        weeklyChartInstance.destroy();
+    }
+
+    // คำนวณแคลอรี่ของวันนี้เพื่อไปใส่ในกราฟ
+    const todayCal = dailyFoods.reduce((sum, item) => sum + item.cal, 0);
+
+    // จำลองข้อมูล 6 วันย้อนหลัง + วันนี้ (ในสเตปต่อไปเราจะดึงของจริงจาก Firebase)
+    const labels = ['จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.', 'วันนี้'];
+    const data = [1800, 2100, 1900, 2400, 2200, 1500, todayCal];
+    
+    // เส้นเป้าหมาย TDEE
+    const target = userData.tdee || 2000;
+    const targetData = Array(7).fill(target);
+
+    weeklyChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'แคลอรี่ที่ทาน',
+                    data: data,
+                    backgroundColor: 'rgba(139, 92, 246, 0.7)', // สีม่วงโปร่งแสง
+                    borderRadius: 6,
+                },
+                {
+                    label: 'เป้าหมาย (TDEE)',
+                    data: targetData,
+                    type: 'line',
+                    borderColor: '#EF4444', // สีแดงเส้นประ
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    fill: false,
+                    borderDash: [5, 5] 
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false } // ซ่อนป้ายกำกับให้ดูมินิมอล
+            },
+            scales: {
+                y: { 
+                    beginAtZero: true,
+                    grid: { color: 'rgba(0,0,0,0.05)' },
+                    border: { display: false }
+                },
+                x: {
+                    grid: { display: false },
+                    border: { display: false }
+                }
+            }
+        }
+    });
+}
