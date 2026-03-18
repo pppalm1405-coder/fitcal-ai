@@ -61,7 +61,8 @@
                 <input type="text" id="food-name" placeholder="พิมพ์ชื่อเมนู (เช่น ข้าวกะเพราหมูสับ)" style="width: 100%;">
             </div>
             <div class="action-buttons">
-                <button onclick="addFoodByName()" class="btn-secondary" style="width: 100%;">วิเคราะห์จากชื่อ</button>
+                <button onclick="addFoodByName()" class="btn-secondary">วิเคราะห์จากชื่อ</button>
+                <button onclick="suggestFood()" class="btn-ai">💡 AI แนะนำเมนู</button>
             </div>
         </section>
 
@@ -82,8 +83,11 @@
                 <input type="number" id="height" placeholder="ส่วนสูง (ซม.)">
             </div>
             <button onclick="calculateTDEE()" class="btn-primary">คำนวณเป้าหมาย</button>
-            <div id="tdee-result" class="hidden" style="margin-top: 10px; text-align: center;">
-                <p>เป้าหมาย: <strong id="tdee-value">0</strong> kcal/วัน</p>
+            <div id="tdee-result" class="hidden" style="margin-top: 15px; text-align: center;">
+                <p>เป้าหมายแคลอรี่: <strong id="tdee-value">0</strong> kcal/วัน</p>
+                <div id="bmi-status-box" style="margin-top: 10px; padding: 8px; border-radius: 8px; font-weight: bold;">
+                    BMI: <span id="bmi-value">0</span> (<span id="bmi-text">ปกติ</span>)
+                </div>
             </div>
         </div>
 
@@ -91,8 +95,7 @@
 
         <div class="menu-section">
             <h3>ประวัติวันนี้ (กดดูส่วนประกอบ)</h3>
-            <ul id="food-list" class="food-list">
-            </ul>
+            <ul id="food-list" class="food-list"></ul>
             <button onclick="clearData()" class="btn-danger mt-15">ล้างข้อมูลทั้งหมด</button>
         </div>
     </div>
@@ -100,13 +103,31 @@
     <div id="ingredient-modal" class="modal hidden">
         <div class="modal-content glass-panel">
             <h3 id="modal-title">รายละเอียดเมนู</h3>
-            <ul id="modal-ingredients" class="ingredient-list">
-            </ul>
+            <ul id="modal-ingredients" class="ingredient-list"></ul>
             <div class="modal-total">
                 <span>รวมทั้งหมด:</span>
                 <strong id="modal-total-cal">0 kcal</strong>
             </div>
-            <button onclick="closeModal()" class="btn-primary mt-15">ปิดหน้าต่าง</button>
+            <button onclick="closeModal('ingredient-modal')" class="btn-primary mt-15">ปิดหน้าต่าง</button>
+        </div>
+    </div>
+
+    <div id="suggestion-modal" class="modal hidden">
+        <div class="modal-content glass-panel" style="text-align: center;">
+            <h3 style="color: #F59E0B;">AI แนะนำเมนู 💡</h3>
+            <p style="color: #4B5563; margin-top: 10px;">โควตาแคลอรี่ที่ทานได้อีก:</p>
+            <h2 id="remaining-cal" style="color: #10B981; font-size: 2rem; margin-bottom: 10px;">0 kcal</h2>
+            
+            <div style="background: rgba(255,255,255,0.7); padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+                <p style="font-size: 0.9rem; color: #6B7280; margin-bottom: 5px;">เมนูที่แนะนำ:</p>
+                <h3 id="suggested-name" style="color: #4C1D95; margin-bottom: 5px;">-</h3>
+                <strong id="suggested-cal" style="color: #EF4444; font-size: 1.2rem;">0 kcal</strong>
+            </div>
+            
+            <div class="action-buttons">
+                <button onclick="addSuggestedFood()" class="btn-primary">✅ เพิ่มเมนูนี้</button>
+                <button onclick="closeModal('suggestion-modal')" class="btn-danger" style="background: #9CA3AF;">ยกเลิก</button>
+            </div>
         </div>
     </div>
 
