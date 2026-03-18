@@ -1,6 +1,3 @@
-// ==========================================
-// 1. ตั้งค่าฐานข้อมูล Firebase
-// ==========================================
 const firebaseConfig = {
     apiKey: "AIzaSyDl51L8y775obXxODk4h58BYqz3kwedJT0",
     authDomain: "fitcal-ai-d89d8.firebaseapp.com",
@@ -11,11 +8,9 @@ const firebaseConfig = {
     measurementId: "G-070DHH82RM"
 };
 
-// เปิดใช้งาน Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// สร้าง ID อัตโนมัติประจำเครื่อง
 let deviceId = localStorage.getItem('deviceId');
 if (!deviceId) {
     deviceId = 'user_' + Date.now();
@@ -23,20 +18,18 @@ if (!deviceId) {
 }
 const userRef = db.collection('users').doc(deviceId);
 
-// ==========================================
-// 2. ตัวแปร และ ระบบ Cloud Sync
-// ==========================================
 let userData = { tdee: 0 };
 let dailyFoods = [];
+let waterCount = 0; // ตัวแปรเก็บจำนวนแก้วน้ำ
 
 async function syncToFirebase() {
     try {
         await userRef.set({
             userData: userData,
             dailyFoods: dailyFoods,
+            waterCount: waterCount, // บันทึกค่าน้ำขึ้น Cloud
             savedDate: new Date().toLocaleDateString('th-TH')
         });
-        console.log("บันทึกข้อมูลขึ้น Firebase สำเร็จ!");
     } catch (error) {
         console.error("Firebase Error:", error);
     }
@@ -53,23 +46,21 @@ async function loadFromFirebase() {
             
             if (data.savedDate !== todayDate) {
                 dailyFoods = []; 
+                waterCount = 0; // ขึ้นวันใหม่ รีเซ็ตน้ำเป็น 0
                 syncToFirebase(); 
             } else {
                 dailyFoods = data.dailyFoods || [];
+                waterCount = data.waterCount || 0; // ดึงค่าน้ำของวันนี้มา
             }
         } else {
             syncToFirebase(); 
         }
         updateUIOnLoad();
     } catch (error) {
-        console.log("ใช้งานโหมด Offline");
         updateUIOnLoad();
     }
 }
 
-// ==========================================
-// 3. ฟังก์ชันควบคุมหน้าจอ (UI Logic)
-// ==========================================
 function updateUIOnLoad() {
     if (userData.tdee > 0) {
         document.getElementById('tdee-result').classList.remove('hidden');
@@ -80,11 +71,29 @@ function updateUIOnLoad() {
     }
     updateDashboard();
     renderFoodList();
+    updateWaterUI(); // อัปเดตหน้าจอน้ำตอนเปิดแอป
 }
 
 function initApp() {
     loadFromFirebase(); 
 }
+
+// --- ระบบดื่มน้ำ (Water Tracker) ---
+function updateWater(change) {
+    waterCount += change;
+    if (waterCount < 0) waterCount = 0; // กันติดลบ
+    
+    updateWaterUI();
+    syncToFirebase(); // อัปเดตขึ้นฐานข้อมูลทันที
+}
+
+function updateWaterUI() {
+    document.getElementById('water-count').innerText = waterCount;
+    // คำนวณหลอดพลังงาน (เป้าหมาย 8 แก้ว)
+    let fillPercentage = Math.min((waterCount / 8) * 100, 100);
+    document.getElementById('water-fill').style.width = fillPercentage + '%';
+}
+// ---------------------------------
 
 function openMenu() {
     document.getElementById('sidebar').classList.add('open');
@@ -116,7 +125,7 @@ function calculateTDEE() {
     document.getElementById('tdee-value').innerText = tdee;
     updateDashboard();
     
-    alert("บันทึกเป้าหมายขึ้นฐานข้อมูลเรียบร้อยครับ!");
+    alert("บันทึกเป้าหมายเรียบร้อยครับ!");
     closeMenu(); 
 }
 
@@ -240,12 +249,13 @@ function closeModal() {
 }
 
 function clearData() {
-    if(confirm("ต้องการล้างประวัติของวันนี้ใช่ไหม?")) {
+    if(confirm("ต้องการล้างประวัติของวันนี้ใช่ไหม? (รวมถึงประวัติน้ำด้วย)")) {
         dailyFoods = [];
+        waterCount = 0;
+        updateWaterUI();
         saveAndRefresh();
         closeMenu();
     }
 }
 
-// สั่งแอปทำงานเมื่อโหลดไฟล์เสร็จ
 initApp();
