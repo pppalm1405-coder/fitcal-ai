@@ -21,9 +21,8 @@ const userRef = db.collection('users').doc(deviceId);
 let userData = { tdee: 0, bmi: 0 };
 let dailyFoods = [];
 let waterCount = 0;
-let currentSuggestedFood = null; // ตัวแปรเก็บเมนูที่ AI กำลังแนะนำ
+let currentSuggestedFood = null; 
 
-// ฐานข้อมูลจำลองของ AI แนะนำเมนู (แคลอรี่ต่ำ-ปานกลาง)
 const aiFoodDatabase = [
     { name: "แอปเปิล 1 ลูก 🍎", cal: 52 },
     { name: "ไข่ต้ม 1 ฟอง 🥚", cal: 70 },
@@ -80,13 +79,17 @@ function updateUIOnLoad() {
         document.getElementById('tdee-result').classList.remove('hidden');
         document.getElementById('tdee-value').innerText = userData.tdee;
         
-        // โหลดข้อมูลเก่ามาใส่ช่อง input
         if(userData.age) document.getElementById('age').value = userData.age;
         if(userData.weight) document.getElementById('weight').value = userData.weight;
         if(userData.height) document.getElementById('height').value = userData.height;
         
-        // อัปเดตสี BMI ถ้าเคยคำนวณไว้แล้ว
         if(userData.bmi) renderBMI(userData.bmi);
+    } else {
+        // กรณีรีเซ็ตข้อมูล ต้องล้างหน้าจอด้วย
+        document.getElementById('tdee-result').classList.add('hidden');
+        document.getElementById('age').value = '';
+        document.getElementById('weight').value = '';
+        document.getElementById('height').value = '';
     }
     updateDashboard();
     renderFoodList();
@@ -97,7 +100,6 @@ function initApp() {
     loadFromFirebase(); 
 }
 
-// ระบบดื่มน้ำ
 function updateWater(change) {
     waterCount += change;
     if (waterCount < 0) waterCount = 0;
@@ -121,7 +123,6 @@ function closeMenu() {
     document.getElementById('sidebar-overlay').classList.remove('open');
 }
 
-// --- คำนวณ TDEE และ BMI ---
 function calculateTDEE() {
     const age = document.getElementById('age').value;
     const weight = parseFloat(document.getElementById('weight').value);
@@ -132,11 +133,9 @@ function calculateTDEE() {
         return;
     }
 
-    // 1. คำนวณ TDEE
     let bmr = (10 * weight) + (6.25 * height) - (5 * age) + 5;
     let tdee = Math.round(bmr * 1.2);
 
-    // 2. คำนวณ BMI = น้ำหนัก (kg) / ส่วนสูง (m)^2
     let heightInMeter = height / 100;
     let bmi = (weight / (heightInMeter * heightInMeter)).toFixed(1);
 
@@ -146,7 +145,6 @@ function calculateTDEE() {
     document.getElementById('tdee-result').classList.remove('hidden');
     document.getElementById('tdee-value').innerText = tdee;
     
-    // 3. นำ BMI ไปแสดงสี
     renderBMI(bmi);
     
     updateDashboard();
@@ -159,10 +157,8 @@ function renderBMI(bmiValue) {
     const bmiText = document.getElementById('bmi-text');
     document.getElementById('bmi-value').innerText = bmiValue;
 
-    // ล้างคลาสสีเก่าออกให้หมด
     bmiBox.classList.remove('bmi-blue', 'bmi-green', 'bmi-yellow', 'bmi-red');
 
-    // กำหนดสีตามเกณฑ์
     if (bmiValue < 18.5) {
         bmiText.innerText = "ผอมไป";
         bmiBox.classList.add('bmi-blue');
@@ -178,7 +174,6 @@ function renderBMI(bmiValue) {
     }
 }
 
-// --- AI แนะนำเมนูอัจฉริยะ ---
 function suggestFood() {
     if (userData.tdee === 0) {
         alert("กรุณาตั้งเป้าหมายในเมนู ☰ ก่อนให้ AI แนะนำนะครับ");
@@ -193,10 +188,8 @@ function suggestFood() {
         return;
     }
 
-    // อัปเดตตัวเลขแคลที่เหลือในหน้าต่าง
     document.getElementById('remaining-cal').innerText = `${remainingCal} kcal`;
     
-    // ให้ AI เลือกอาหารที่ไม่เกินโควตา
     const availableFoods = aiFoodDatabase.filter(food => food.cal <= remainingCal);
     
     if (availableFoods.length === 0) {
@@ -204,22 +197,17 @@ function suggestFood() {
         return;
     }
 
-    // สุ่มเลือก 1 เมนู
     const randomIndex = Math.floor(Math.random() * availableFoods.length);
     currentSuggestedFood = availableFoods[randomIndex];
 
-    // แสดงผล
     document.getElementById('suggested-name').innerText = currentSuggestedFood.name;
     document.getElementById('suggested-cal').innerText = `${currentSuggestedFood.cal} kcal`;
     
-    // เปิดหน้าต่าง
     document.getElementById('suggestion-modal').classList.remove('hidden');
 }
 
-// ปุ่มกดยืนยันเพิ่มอาหารจากที่ AI แนะนำ
 function addSuggestedFood() {
     if (currentSuggestedFood) {
-        // แอบเติมข้อมูลส่วนประกอบจำลองให้ด้วย เพื่อให้กดดูประวัติได้
         const mockIngredients = [
             { name: "วัตถุดิบหลัก", cal: currentSuggestedFood.cal - 10 },
             { name: "เครื่องปรุง", cal: 10 }
@@ -235,7 +223,6 @@ function addSuggestedFood() {
         closeModal('suggestion-modal');
     }
 }
-// ------------------------------
 
 function generateAIAnalysis(foodName) {
     const ingredients = [
@@ -325,7 +312,6 @@ function renderFoodList() {
         li.onclick = () => {
             closeMenu(); 
             setTimeout(() => {
-                // เซ็ตข้อมูลลง Modal ของประวัติอาหาร
                 document.getElementById('modal-title').innerText = item.name;
                 const ul = document.getElementById('modal-ingredients');
                 ul.innerHTML = '';
@@ -347,17 +333,39 @@ function renderFoodList() {
     });
 }
 
-// อัปเดตฟังก์ชันปิด Modal ให้รองรับหลายหน้าต่าง
 function closeModal(modalId) {
     document.getElementById(modalId).classList.add('hidden');
 }
 
+// ล้างเฉพาะข้อมูลวันนี้
 function clearData() {
-    if(confirm("ต้องการล้างประวัติของวันนี้ใช่ไหม? (รวมถึงประวัติน้ำด้วย)")) {
+    if(confirm("ต้องการล้างประวัติการทานของวันนี้ใช่ไหม?")) {
+        dailyFoods = [];
+        saveAndRefresh();
+        closeMenu();
+    }
+}
+
+// --- ล้างข้อมูลทุกอย่าง (Hard Reset) ---
+function resetAllData() {
+    if(confirm("🚨 คำเตือน: คุณต้องการ 'รีเซ็ตข้อมูลทุกอย่าง' ใช่หรือไม่?\n\n(ข้อมูลส่วนตัว, เป้าหมาย BMI, ประวัติการกิน และค่าน้ำ จะถูกลบทั้งหมดและไม่สามารถกู้คืนได้)")) {
+        
+        // 1. เคลียร์ตัวแปรทั้งหมดให้เป็นค่าเริ่มต้น
+        userData = { tdee: 0, bmi: 0 };
         dailyFoods = [];
         waterCount = 0;
-        updateWaterUI();
-        saveAndRefresh();
+        
+        // 2. ล้างข้อมูลในเครื่อง (LocalStorage)
+        localStorage.removeItem('userData');
+        localStorage.removeItem('dailyFoods');
+
+        // 3. ซิงค์ข้อมูลที่ว่างเปล่าทับขึ้นไปบน Firebase
+        syncToFirebase(); 
+        
+        // 4. รีเฟรชหน้าจอทั้งหมดให้กลับไปเป็นศูนย์
+        updateUIOnLoad();
+        
+        alert("รีเซ็ตข้อมูลทั้งหมดเรียบร้อยแล้วครับ 🧹 กลับสู่จุดเริ่มต้น!");
         closeMenu();
     }
 }
