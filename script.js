@@ -18,16 +18,30 @@ if (!deviceId) {
 }
 const userRef = db.collection('users').doc(deviceId);
 
-let userData = { tdee: 0 };
+let userData = { tdee: 0, bmi: 0 };
 let dailyFoods = [];
-let waterCount = 0; // ตัวแปรเก็บจำนวนแก้วน้ำ
+let waterCount = 0;
+let currentSuggestedFood = null; // ตัวแปรเก็บเมนูที่ AI กำลังแนะนำ
+
+// ฐานข้อมูลจำลองของ AI แนะนำเมนู (แคลอรี่ต่ำ-ปานกลาง)
+const aiFoodDatabase = [
+    { name: "แอปเปิล 1 ลูก 🍎", cal: 52 },
+    { name: "ไข่ต้ม 1 ฟอง 🥚", cal: 70 },
+    { name: "นมถั่วเหลืองจืด 1 กล่อง 🥛", cal: 80 },
+    { name: "กล้วยหอม 1 ผล 🍌", cal: 120 },
+    { name: "สลัดผักน้ำใส 🥗", cal: 150 },
+    { name: "อกไก่ย่าง (100g) 🍗", cal: 165 },
+    { name: "แกงจืดเต้าหู้หมูสับ 🍲", cal: 200 },
+    { name: "เกาเหลาหมูตุ๋น 🍜", cal: 250 },
+    { name: "ข้าวต้มปลา 🍚", cal: 320 }
+];
 
 async function syncToFirebase() {
     try {
         await userRef.set({
             userData: userData,
             dailyFoods: dailyFoods,
-            waterCount: waterCount, // บันทึกค่าน้ำขึ้น Cloud
+            waterCount: waterCount,
             savedDate: new Date().toLocaleDateString('th-TH')
         });
     } catch (error) {
@@ -42,15 +56,15 @@ async function loadFromFirebase() {
 
         if (doc.exists) {
             const data = doc.data();
-            userData = data.userData || { tdee: 0 };
+            userData = data.userData || { tdee: 0, bmi: 0 };
             
             if (data.savedDate !== todayDate) {
                 dailyFoods = []; 
-                waterCount = 0; // ขึ้นวันใหม่ รีเซ็ตน้ำเป็น 0
+                waterCount = 0;
                 syncToFirebase(); 
             } else {
                 dailyFoods = data.dailyFoods || [];
-                waterCount = data.waterCount || 0; // ดึงค่าน้ำของวันนี้มา
+                waterCount = data.waterCount || 0;
             }
         } else {
             syncToFirebase(); 
@@ -65,35 +79,37 @@ function updateUIOnLoad() {
     if (userData.tdee > 0) {
         document.getElementById('tdee-result').classList.remove('hidden');
         document.getElementById('tdee-value').innerText = userData.tdee;
+        
+        // โหลดข้อมูลเก่ามาใส่ช่อง input
         if(userData.age) document.getElementById('age').value = userData.age;
         if(userData.weight) document.getElementById('weight').value = userData.weight;
         if(userData.height) document.getElementById('height').value = userData.height;
+        
+        // อัปเดตสี BMI ถ้าเคยคำนวณไว้แล้ว
+        if(userData.bmi) renderBMI(userData.bmi);
     }
     updateDashboard();
     renderFoodList();
-    updateWaterUI(); // อัปเดตหน้าจอน้ำตอนเปิดแอป
+    updateWaterUI();
 }
 
 function initApp() {
     loadFromFirebase(); 
 }
 
-// --- ระบบดื่มน้ำ (Water Tracker) ---
+// ระบบดื่มน้ำ
 function updateWater(change) {
     waterCount += change;
-    if (waterCount < 0) waterCount = 0; // กันติดลบ
-    
+    if (waterCount < 0) waterCount = 0;
     updateWaterUI();
-    syncToFirebase(); // อัปเดตขึ้นฐานข้อมูลทันที
+    syncToFirebase();
 }
 
 function updateWaterUI() {
     document.getElementById('water-count').innerText = waterCount;
-    // คำนวณหลอดพลังงาน (เป้าหมาย 8 แก้ว)
     let fillPercentage = Math.min((waterCount / 8) * 100, 100);
     document.getElementById('water-fill').style.width = fillPercentage + '%';
 }
-// ---------------------------------
 
 function openMenu() {
     document.getElementById('sidebar').classList.add('open');
@@ -105,29 +121,121 @@ function closeMenu() {
     document.getElementById('sidebar-overlay').classList.remove('open');
 }
 
+// --- คำนวณ TDEE และ BMI ---
 function calculateTDEE() {
     const age = document.getElementById('age').value;
-    const weight = document.getElementById('weight').value;
-    const height = document.getElementById('height').value;
+    const weight = parseFloat(document.getElementById('weight').value);
+    const height = parseFloat(document.getElementById('height').value);
 
     if (!age || !weight || !height) {
         alert("กรุณากรอกข้อมูลให้ครบถ้วนครับ");
         return;
     }
 
+    // 1. คำนวณ TDEE
     let bmr = (10 * weight) + (6.25 * height) - (5 * age) + 5;
     let tdee = Math.round(bmr * 1.2);
 
-    userData = { tdee: tdee, age: age, weight: weight, height: height };
+    // 2. คำนวณ BMI = น้ำหนัก (kg) / ส่วนสูง (m)^2
+    let heightInMeter = height / 100;
+    let bmi = (weight / (heightInMeter * heightInMeter)).toFixed(1);
+
+    userData = { tdee: tdee, age: age, weight: weight, height: height, bmi: bmi };
     syncToFirebase(); 
     
     document.getElementById('tdee-result').classList.remove('hidden');
     document.getElementById('tdee-value').innerText = tdee;
-    updateDashboard();
     
-    alert("บันทึกเป้าหมายเรียบร้อยครับ!");
+    // 3. นำ BMI ไปแสดงสี
+    renderBMI(bmi);
+    
+    updateDashboard();
+    alert("บันทึกเป้าหมายและคำนวณ BMI เรียบร้อยครับ!");
     closeMenu(); 
 }
+
+function renderBMI(bmiValue) {
+    const bmiBox = document.getElementById('bmi-status-box');
+    const bmiText = document.getElementById('bmi-text');
+    document.getElementById('bmi-value').innerText = bmiValue;
+
+    // ล้างคลาสสีเก่าออกให้หมด
+    bmiBox.classList.remove('bmi-blue', 'bmi-green', 'bmi-yellow', 'bmi-red');
+
+    // กำหนดสีตามเกณฑ์
+    if (bmiValue < 18.5) {
+        bmiText.innerText = "ผอมไป";
+        bmiBox.classList.add('bmi-blue');
+    } else if (bmiValue >= 18.5 && bmiValue <= 22.9) {
+        bmiText.innerText = "ปกติ เยี่ยมมาก!";
+        bmiBox.classList.add('bmi-green');
+    } else if (bmiValue >= 23.0 && bmiValue <= 24.9) {
+        bmiText.innerText = "ท้วม/น้ำหนักเกิน";
+        bmiBox.classList.add('bmi-yellow');
+    } else {
+        bmiText.innerText = "อ้วน";
+        bmiBox.classList.add('bmi-red');
+    }
+}
+
+// --- AI แนะนำเมนูอัจฉริยะ ---
+function suggestFood() {
+    if (userData.tdee === 0) {
+        alert("กรุณาตั้งเป้าหมายในเมนู ☰ ก่อนให้ AI แนะนำนะครับ");
+        return;
+    }
+
+    const totalCal = dailyFoods.reduce((sum, item) => sum + item.cal, 0);
+    const remainingCal = userData.tdee - totalCal;
+
+    if (remainingCal <= 0) {
+        alert("โควตาแคลอรี่วันนี้หมดแล้วครับ! พักผ่อนดีกว่านะครับ 😴");
+        return;
+    }
+
+    // อัปเดตตัวเลขแคลที่เหลือในหน้าต่าง
+    document.getElementById('remaining-cal').innerText = `${remainingCal} kcal`;
+    
+    // ให้ AI เลือกอาหารที่ไม่เกินโควตา
+    const availableFoods = aiFoodDatabase.filter(food => food.cal <= remainingCal);
+    
+    if (availableFoods.length === 0) {
+        alert("เหลือแคลอรี่น้อยเกินไป แนะนำให้ดื่มน้ำเปล่าครับ 💧");
+        return;
+    }
+
+    // สุ่มเลือก 1 เมนู
+    const randomIndex = Math.floor(Math.random() * availableFoods.length);
+    currentSuggestedFood = availableFoods[randomIndex];
+
+    // แสดงผล
+    document.getElementById('suggested-name').innerText = currentSuggestedFood.name;
+    document.getElementById('suggested-cal').innerText = `${currentSuggestedFood.cal} kcal`;
+    
+    // เปิดหน้าต่าง
+    document.getElementById('suggestion-modal').classList.remove('hidden');
+}
+
+// ปุ่มกดยืนยันเพิ่มอาหารจากที่ AI แนะนำ
+function addSuggestedFood() {
+    if (currentSuggestedFood) {
+        // แอบเติมข้อมูลส่วนประกอบจำลองให้ด้วย เพื่อให้กดดูประวัติได้
+        const mockIngredients = [
+            { name: "วัตถุดิบหลัก", cal: currentSuggestedFood.cal - 10 },
+            { name: "เครื่องปรุง", cal: 10 }
+        ];
+        
+        dailyFoods.push({
+            name: currentSuggestedFood.name + " (AI แนะนำ)",
+            cal: currentSuggestedFood.cal,
+            ingredients: mockIngredients
+        });
+        
+        saveAndRefresh();
+        closeModal('suggestion-modal');
+    }
+}
+// ------------------------------
 
 function generateAIAnalysis(foodName) {
     const ingredients = [
@@ -216,36 +324,32 @@ function renderFoodList() {
         const li = document.createElement('li');
         li.onclick = () => {
             closeMenu(); 
-            setTimeout(() => openModal(index), 300);
+            setTimeout(() => {
+                // เซ็ตข้อมูลลง Modal ของประวัติอาหาร
+                document.getElementById('modal-title').innerText = item.name;
+                const ul = document.getElementById('modal-ingredients');
+                ul.innerHTML = '';
+                if (item.ingredients && item.ingredients.length > 0) {
+                    item.ingredients.forEach(ing => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `<span>${ing.name}</span> <span>${ing.cal} kcal</span>`;
+                        ul.appendChild(li);
+                    });
+                } else {
+                    ul.innerHTML = '<li><span>ไม่มีข้อมูลส่วนประกอบ</span></li>';
+                }
+                document.getElementById('modal-total-cal').innerText = `${item.cal} kcal`;
+                document.getElementById('ingredient-modal').classList.remove('hidden');
+            }, 300);
         };
         li.innerHTML = `<span>${item.name}</span> <span><strong>${item.cal}</strong> kcal</span>`;
         list.appendChild(li);
     });
 }
 
-function openModal(index) {
-    const item = dailyFoods[index];
-    document.getElementById('modal-title').innerText = item.name;
-    
-    const ul = document.getElementById('modal-ingredients');
-    ul.innerHTML = '';
-    
-    if (item.ingredients && item.ingredients.length > 0) {
-        item.ingredients.forEach(ing => {
-            const li = document.createElement('li');
-            li.innerHTML = `<span>${ing.name}</span> <span>${ing.cal} kcal</span>`;
-            ul.appendChild(li);
-        });
-    } else {
-        ul.innerHTML = '<li><span>ไม่มีข้อมูลส่วนประกอบ</span></li>';
-    }
-    
-    document.getElementById('modal-total-cal').innerText = `${item.cal} kcal`;
-    document.getElementById('ingredient-modal').classList.remove('hidden');
-}
-
-function closeModal() {
-    document.getElementById('ingredient-modal').classList.add('hidden');
+// อัปเดตฟังก์ชันปิด Modal ให้รองรับหลายหน้าต่าง
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.add('hidden');
 }
 
 function clearData() {
