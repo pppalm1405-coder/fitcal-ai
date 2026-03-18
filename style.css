@@ -7,26 +7,20 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Prompt', sans-serif; }
-
 body { background: linear-gradient(135deg, var(--primary-green) 0%, var(--primary-blue) 50%, var(--primary-purple) 100%); color: var(--text-dark); min-height: 100vh; display: flex; justify-content: center; padding: 20px 10px; background-attachment: fixed; overflow-x: hidden; }
-
 .app-container { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 15px; }
-
 .glass-panel { background: var(--white); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-radius: 24px; padding: 20px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05); border: 1px solid rgba(255, 255, 255, 0.4); animation: fadeInUp 0.5s ease forwards; }
 
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 
-/* Header & Menu */
 .header-flex { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; }
 header h1 { font-size: 1.6rem; color: #4C1D95; }
 header p { font-size: 0.85rem; color: #6B7280; }
 .menu-btn { background: none; border: none; font-size: 2rem; color: #4C1D95; padding: 0; width: auto; cursor: pointer; transition: transform 0.2s; box-shadow: none; }
 .menu-btn:active { transform: scale(0.9); }
-
 h2 { font-size: 1.2rem; margin-bottom: 15px; color: #374151; }
 h3 { font-size: 1rem; margin-bottom: 10px; color: #4C1D95; }
 
-/* Inputs & Buttons */
 .input-group { display: flex; gap: 10px; margin-bottom: 15px; }
 input { width: 100%; padding: 12px; border: 1px solid #E5E7EB; border-radius: 12px; font-size: 1rem; background: rgba(255,255,255,0.9); outline: none; transition: all 0.3s; }
 input:focus { border-color: #8B5CF6; box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2); }
@@ -35,17 +29,17 @@ button:active { transform: scale(0.98); }
 .btn-primary { background: #8B5CF6; color: white; }
 .action-buttons { display: flex; gap: 10px; }
 .btn-secondary { background: #3B82F6; color: white; flex: 1; }
+.btn-ai { background: linear-gradient(90deg, #F59E0B, #EC4899); color: white; flex: 1; }
 .btn-danger { background: #EF4444; color: white; }
 .hidden { display: none !important; }
 
-/* Dashboard Circle */
 .dashboard { text-align: center; }
 .circle-progress { width: 150px; height: 150px; border-radius: 50%; background: conic-gradient(#8B5CF6 0%, #E5E7EB 0%); margin: 0 auto 20px auto; display: flex; align-items: center; justify-content: center; position: relative; transition: background 0.5s ease; }
 .circle-inner { width: 130px; height: 130px; background: white; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .circle-inner h3 { font-size: 2rem; color: #111827; }
 .emoji-status .emoji { font-size: 4rem; display: block; margin-bottom: 5px; }
 
-/* --- Water Tracker (ระบบดื่มน้ำ) --- */
+/* Water Tracker */
 .water-tracker { display: flex; justify-content: center; align-items: center; gap: 30px; margin-bottom: 15px; }
 .water-btn { width: 50px; height: 50px; border-radius: 50%; background: #E0F2FE; color: #0284C7; font-size: 1.8rem; display: flex; align-items: center; justify-content: center; padding: 0; box-shadow: 0 4px 10px rgba(56, 189, 248, 0.2); }
 #water-count { font-size: 2.5rem; font-weight: bold; color: #0284C7; }
@@ -78,3 +72,9 @@ button:active { transform: scale(0.98); }
 .ingredient-list li { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #D1D5DB; font-size: 0.95rem; color: #4B5563; }
 .modal-total { display: flex; justify-content: space-between; font-size: 1.2rem; color: #111827; padding-top: 15px; border-top: 2px solid rgba(139, 92, 246, 0.5); }
 .mt-15 { margin-top: 15px; }
+
+/* --- สีของ BMI --- */
+.bmi-blue { background: #E0F2FE; color: #0284C7; }
+.bmi-green { background: #D1FAE5; color: #059669; }
+.bmi-yellow { background: #FEF3C7; color: #D97706; }
+.bmi-red { background: #FEE2E2; color: #DC2626; }
