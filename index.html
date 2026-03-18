@@ -35,6 +35,26 @@
             </div>
         </section>
 
+        <section class="glass-panel water-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                <h2 style="margin: 0; color: #0284C7;">ดื่มน้ำวันนี้ 💧</h2>
+                <span style="font-size: 0.85rem; color: #6B7280;">เป้าหมาย 8 แก้ว</span>
+            </div>
+            <p style="font-size: 0.85rem; color: #3B82F6; margin-bottom: 15px;">
+                * 1 แก้ว = ประมาณ 250 มล.
+            </p>
+            <div class="water-tracker">
+                <button class="water-btn" onclick="updateWater(-1)">-</button>
+                <div class="water-display">
+                    <span id="water-count">0</span>
+                </div>
+                <button class="water-btn" onclick="updateWater(1)">+</button>
+            </div>
+            <div class="water-progress-bar">
+                <div id="water-fill" class="water-fill"></div>
+            </div>
+        </section>
+
         <section class="glass-panel add-food">
             <h2>เพิ่มมื้ออาหาร</h2>
             <div class="input-group">
@@ -72,7 +92,7 @@
         <div class="menu-section">
             <h3>ประวัติวันนี้ (กดดูส่วนประกอบ)</h3>
             <ul id="food-list" class="food-list">
-                </ul>
+            </ul>
             <button onclick="clearData()" class="btn-danger mt-15">ล้างข้อมูลทั้งหมด</button>
         </div>
     </div>
@@ -81,7 +101,7 @@
         <div class="modal-content glass-panel">
             <h3 id="modal-title">รายละเอียดเมนู</h3>
             <ul id="modal-ingredients" class="ingredient-list">
-                </ul>
+            </ul>
             <div class="modal-total">
                 <span>รวมทั้งหมด:</span>
                 <strong id="modal-total-cal">0 kcal</strong>
