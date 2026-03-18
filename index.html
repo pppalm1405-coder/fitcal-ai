@@ -96,8 +96,13 @@
         <div class="menu-section">
             <h3>ประวัติวันนี้ (กดดูส่วนประกอบ)</h3>
             <ul id="food-list" class="food-list"></ul>
-            <button onclick="clearData()" class="btn-danger mt-15">ล้างข้อมูลทั้งหมด</button>
+            <button onclick="clearData()" class="btn-secondary mt-15" style="background: #9CA3AF;">ล้างเฉพาะประวัติวันนี้</button>
         </div>
+        
+        <hr class="divider">
+        
+        <button onclick="resetAllData()" class="btn-danger" style="margin-top: auto;">🚨 รีเซ็ตข้อมูลทั้งหมด</button>
+
     </div>
 
     <div id="ingredient-modal" class="modal hidden">
